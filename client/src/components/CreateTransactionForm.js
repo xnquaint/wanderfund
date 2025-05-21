@@ -7,7 +7,6 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  Grid,
   FormControl,
   InputLabel,
   Select,
@@ -37,42 +36,54 @@ const CreateTransactionForm = ({ token, tripId, tripCurrency, onTransactionCreat
   const [formSuccess, setFormSuccess] = useState('');
   const [showOriginalCurrencyFields, setShowOriginalCurrencyFields] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    if (!token) return;
-    try {
-      const categoriesResponse = await axios.get(`${API_URL}/categories`, {
-      });
-      setCategories(categoriesResponse.data.categories || []);
-
-      const currenciesResponse = await axios.get(`${API_URL}/currencies`);
-      setCurrencies(currenciesResponse.data.currencies || []);
-      if (tripCurrency && tripCurrency.id) {
-        setCurrencyId(tripCurrency.id);
-      }
-
-    } catch (err) {
-      console.error('Failed to fetch categories or currencies', err);
-      setFormError('Не вдалося завантажити довідники (категорії/валюти).');
+  useEffect(() => {
+    if (description && (formError || formSuccess)) {
+      setFormError('');
+      setFormSuccess('');
     }
-  }, [token, tripCurrency]);
+  }, [description]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleAutoCategorize = async () => {
-    if (!description) {
-        setFormError('Введіть опис для автоматичної категоризації.');
-        return;
+    if (amount && (formError || formSuccess)) {
+      setFormError('');
+      setFormSuccess('');
     }
-    alert('Автоматична категоризація на основі опису (поки що не реалізовано через окремий запит). Категорія буде визначена при збереженні, якщо не обрана вручну.');
-  };
+  }, [amount]);
+
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!token && !(process.env.NODE_ENV === 'development' && API_URL.startsWith('http://localhost'))) {
+        // console.warn("Token is missing for fetching categories/currencies");
+      }
+      try {
+        const categoriesResponse = await axios.get(`${API_URL}/categories`, {
+          // headers: { Authorization: `Bearer ${token}` }, 
+        });
+        setCategories(categoriesResponse.data.categories || []);
+
+        const currenciesResponse = await axios.get(`${API_URL}/currencies`);
+        setCurrencies(currenciesResponse.data.currencies || []);
+        
+        if (tripCurrency && tripCurrency.id) {
+          setCurrencyId(tripCurrency.id);
+        } else if (currenciesResponse.data.currencies && currenciesResponse.data.currencies.length > 0 && !currencyId) {
+          // setCurrencyId(currenciesResponse.data.currencies[0].id); 
+        }
+
+      } catch (err) {
+        console.error('Failed to fetch categories or currencies', err);
+        setFormError('Не вдалося завантажити довідники (категорії/валюти).');
+      }
+    };
+    fetchData();
+  }, [token, tripCurrency, currencyId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setFormError('');
-    setFormSuccess('');
+    setFormError(''); 
+    setFormSuccess(''); 
 
     if (!amount || parseFloat(amount) <= 0) {
       setFormError('Сума транзакції повинна бути більшою за нуль.');
@@ -84,14 +95,19 @@ const CreateTransactionForm = ({ token, tripId, tripCurrency, onTransactionCreat
       setLoading(false);
       return;
     }
+    if (!transactionDate) {
+        setFormError('Дата транзакції є обов\'язковою.');
+        setLoading(false);
+        return;
+    }
 
     const transactionData = {
-      description,
+      description: description.trim() || null,
       amount: parseFloat(amount),
       categoryId: categoryId ? parseInt(categoryId, 10) : null,
       transactionDate,
       currencyId: parseInt(currencyId, 10),
-      location,
+      location: location.trim() || null,
       originalAmount: originalAmount ? parseFloat(originalAmount) : null,
       originalCurrencyId: originalCurrencyId ? parseInt(originalCurrencyId, 10) : null,
     };
@@ -102,6 +118,7 @@ const CreateTransactionForm = ({ token, tripId, tripCurrency, onTransactionCreat
       });
       setLoading(false);
       setFormSuccess(`Транзакцію "${response.data.transaction.description || 'Без опису'}" успішно додано!`);
+      
       setDescription('');
       setAmount('');
       setCategoryId('');
@@ -124,166 +141,158 @@ const CreateTransactionForm = ({ token, tripId, tripCurrency, onTransactionCreat
     }
   };
 
+  const handleCancel = () => {
+    setFormError('');
+    setFormSuccess('');
+    onCancel();
+  };
+
   return (
     <Paper elevation={6} sx={{ padding: {xs: 2, sm: 3}, mt: 3, mb:3, borderRadius: 3, maxWidth: '700px', width: '100%', margin: 'auto' }}>
       <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
-        <Typography variant="h6" component="h3" gutterBottom sx={{ fontWeight: 'medium' }}>
+        <Typography variant="h6" component="h3" sx={{ fontWeight: 'medium' }}>
           Додати нову транзакцію
         </Typography>
-        <IconButton onClick={onCancel} size="small">
+        <IconButton onClick={handleCancel} size="small">
             <CloseIcon />
         </IconButton>
       </Box>
-      <Box component="form" onSubmit={handleSubmit} noValidate>
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
+      <Box component="form" onSubmit={handleSubmit} noValidate
+        sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}
+      >
+        <TextField
+          label="Опис транзакції"
+          variant="outlined"
+          fullWidth
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          disabled={loading}
+          helperText="Наприклад: Обід в кафе, Квиток на метро, Сувенір"
+        />
+        
+        <TextField 
+          label="Сума"
+          type="number"
+          variant="outlined"
+          fullWidth
+          required
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          disabled={loading}
+          inputProps={{ min: "0.01", step: "0.01" }}
+        />
+        
+        <FormControl fullWidth required disabled={loading} variant="outlined">
+          <InputLabel id="transaction-currency-select-label">Валюта суми</InputLabel>
+          <Select
+            labelId="transaction-currency-select-label"
+            value={currencyId}
+            label="Валюта суми"
+            onChange={(e) => setCurrencyId(e.target.value)}
+          >
+            {currencies.map((currency) => (
+              <MenuItem key={currency.id} value={currency.id}>
+                {currency.code} ({currency.name})
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <Button 
+            size="small" 
+            onClick={() => setShowOriginalCurrencyFields(!showOriginalCurrencyFields)}
+            sx={{textTransform: 'none', alignSelf: 'flex-start'}}
+        >
+          {showOriginalCurrencyFields ? 'Приховати оригінальну суму/валюту' : '+ Вказати оригінальну суму/валюту (для конвертації)'}
+        </Button>
+
+        {showOriginalCurrencyFields && (
+          <>
             <TextField
-              label="Опис транзакції"
-              variant="outlined"
-              fullWidth
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={loading}
-              helperText="Наприклад: Обід в кафе, Квиток на метро, Сувенір"
-            />
-          </Grid>
-          <Grid item xs={12} sm={showOriginalCurrencyFields ? 6 : 8}>
-            <TextField
-              label="Сума"
+              label="Оригінальна сума"
               type="number"
               variant="outlined"
               fullWidth
-              required
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              value={originalAmount}
+              onChange={(e) => setOriginalAmount(e.target.value)}
               disabled={loading}
               inputProps={{ min: "0.01", step: "0.01" }}
             />
-          </Grid>
-          <Grid item xs={12} sm={showOriginalCurrencyFields ? 6 : 4}>
-            <FormControl fullWidth required disabled={loading} variant="outlined">
-              <InputLabel id="transaction-currency-select-label">Валюта</InputLabel>
+            <FormControl fullWidth disabled={loading} variant="outlined">
+              <InputLabel id="original-currency-select-label">Оригінальна валюта</InputLabel>
               <Select
-                labelId="transaction-currency-select-label"
-                value={currencyId}
-                label="Валюта"
-                onChange={(e) => setCurrencyId(e.target.value)}
+                labelId="original-currency-select-label"
+                value={originalCurrencyId}
+                label="Оригінальна валюта"
+                onChange={(e) => setOriginalCurrencyId(e.target.value)}
               >
+                 <MenuItem value=""><em>Не вказано</em></MenuItem>
                 {currencies.map((currency) => (
-                  <MenuItem key={currency.id} value={currency.id}>
-                    {currency.code}
+                  <MenuItem key={`orig-${currency.id}`} value={currency.id}>
+                    {currency.code} ({currency.name})
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-
-          <Grid item xs={12}>
-            <Button 
-                size="small" 
-                onClick={() => setShowOriginalCurrencyFields(!showOriginalCurrencyFields)}
-                sx={{textTransform: 'none', mb: showOriginalCurrencyFields ? 1: 0}}
-            >
-              {showOriginalCurrencyFields ? 'Приховати оригінальну валюту' : 'Вказати оригінальну суму/валюту (для конвертації)'}
-            </Button>
-          </Grid>
-
-          {showOriginalCurrencyFields && (
-            <>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Оригінальна сума"
-                  type="number"
-                  variant="outlined"
-                  fullWidth
-                  value={originalAmount}
-                  onChange={(e) => setOriginalAmount(e.target.value)}
-                  disabled={loading}
-                  inputProps={{ min: "0.01", step: "0.01" }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth disabled={loading} variant="outlined">
-                  <InputLabel id="original-currency-select-label">Ориг. валюта</InputLabel>
-                  <Select
-                    labelId="original-currency-select-label"
-                    value={originalCurrencyId}
-                    label="Ориг. валюта"
-                    onChange={(e) => setOriginalCurrencyId(e.target.value)}
-                  >
-                     <MenuItem value=""><em>Не вказано</em></MenuItem>
-                    {currencies.map((currency) => (
-                      <MenuItem key={`orig-${currency.id}`} value={currency.id}>
-                        {currency.code}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </>
-          )}
-
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth variant="outlined" disabled={loading}>
-              <InputLabel id="category-select-label">Категорія (опціонально)</InputLabel>
-              <Select
-                labelId="category-select-label"
-                value={categoryId}
-                label="Категорія (опціонально)"
-                onChange={(e) => setCategoryId(e.target.value)}
-              >
-                <MenuItem value="">
-                  <em>Автоматично / Не вказано</em>
-                </MenuItem>
-                {categories.map((category) => (
-                  <MenuItem key={category.id} value={category.id}>
-                    {category.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="Дата транзакції"
-              type="date"
-              variant="outlined"
-              fullWidth
-              required
-              InputLabelProps={{ shrink: true }}
-              value={transactionDate}
-              onChange={(e) => setTransactionDate(e.target.value)}
-              disabled={loading}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              label="Місцезнаходження (опціонально)"
-              variant="outlined"
-              fullWidth
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              disabled={loading}
-            />
-          </Grid>
-        </Grid>
+          </>
+        )}
+        
+        <FormControl fullWidth variant="outlined" disabled={loading}>
+          <InputLabel id="category-select-label-trans">Категорія (опціонально)</InputLabel>
+          <Select
+            labelId="category-select-label-trans"
+            value={categoryId}
+            label="Категорія (опціонально)"
+            onChange={(e) => setCategoryId(e.target.value)}
+          >
+            <MenuItem value="">
+              <em>Автоматично / Не вказано</em>
+            </MenuItem>
+            {categories.map((category) => (
+              <MenuItem key={category.id} value={category.id}>
+                {category.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        
+        <TextField
+          label="Дата транзакції"
+          type="date"
+          variant="outlined"
+          fullWidth
+          required
+          InputLabelProps={{ shrink: true }}
+          value={transactionDate}
+          onChange={(e) => setTransactionDate(e.target.value)}
+          disabled={loading}
+        />
+        
+        <TextField
+          label="Місцезнаходження (опціонально)"
+          variant="outlined"
+          fullWidth
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          disabled={loading}
+        />
 
         {formError && (
-          <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
+          <Alert severity="error" sx={{ mt: 1, width: '100%' }} onClose={() => setFormError('')}> {/* Додано onClose */}
             {formError}
           </Alert>
         )}
         {formSuccess && (
-          <Alert severity="success" sx={{ mt: 2, width: '100%' }}>
+          <Alert severity="success" sx={{ mt: 1, width: '100%' }} onClose={() => setFormSuccess('')}> {/* Додано onClose */}
             {formSuccess}
           </Alert>
         )}
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
           <Button
-            onClick={onCancel}
+            onClick={handleCancel}
             color="inherit"
-            variant="outlined"
+            variant="text"
             sx={{ mr: 2 }}
             disabled={loading}
           >

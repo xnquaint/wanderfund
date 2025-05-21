@@ -14,7 +14,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  Paper
+  Paper,
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -41,7 +41,7 @@ const TripsList = ({ token, onCreateTripRequest, onViewDetailsRequest }) => {
     } finally {
       setLoading(false);
     }
-  }, [token]); 
+  }, [token]);
 
   useEffect(() => {
     if (token) {
@@ -85,14 +85,16 @@ const TripsList = ({ token, onCreateTripRequest, onViewDetailsRequest }) => {
         <Typography variant="h4" component="h1" sx={{fontWeight: 'bold'}}>
           Мої подорожі
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddCircleOutlineIcon />}
-          onClick={onCreateTripRequest}
-        >
-          Створити подорож
-        </Button>
+        {(trips.length > 0 || loading) && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddCircleOutlineIcon />}
+            onClick={onCreateTripRequest}
+          >
+            Створити подорож
+          </Button>
+        )}
       </Box>
 
       {error && (
@@ -103,13 +105,10 @@ const TripsList = ({ token, onCreateTripRequest, onViewDetailsRequest }) => {
 
       {trips.length === 0 && !loading && (
         <Paper sx={{p: {xs: 2, sm: 4}, textAlign: 'center', mt: 4, borderRadius: 3, boxShadow: 1}}>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
+            <Typography variant="h6" color="text.secondary" gutterBottom sx={{mb:2}}>
             У вас ще немає запланованих подорожей.
             </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{mb:2}}>
-            Почніть планувати свої пригоди вже зараз!
-            </Typography>
-            <Button variant="outlined" color="primary" onClick={onCreateTripRequest} startIcon={<AddCircleOutlineIcon />}>
+            <Button variant="contained" color="primary" onClick={onCreateTripRequest} startIcon={<AddCircleOutlineIcon />} size="large"> {/* Зробив кнопку більшою */}
                 Створити першу подорож
             </Button>
         </Paper>
@@ -122,7 +121,7 @@ const TripsList = ({ token, onCreateTripRequest, onViewDetailsRequest }) => {
                 display: 'flex', 
                 flexDirection: 'column', 
                 height: '100%', 
-                borderRadius: 3, // Збільшено borderRadius
+                borderRadius: 3, 
                 boxShadow: '0 4px 12px rgba(0,0,0,0.08)', 
                 transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out',
                 '&:hover': {
@@ -141,7 +140,7 @@ const TripsList = ({ token, onCreateTripRequest, onViewDetailsRequest }) => {
                     label={trip.status ? trip.status.charAt(0).toUpperCase() + trip.status.slice(1) : 'Невідомий'}
                     color={trip.status === 'planned' ? 'info' : trip.status === 'active' ? 'success' : 'default'} 
                     size="small" 
-                    sx={{mb: 1.5, fontWeight: 'medium', borderRadius: '6px'}}
+                    sx={{mb:1.5, fontWeight: 'medium', borderRadius: '6px'}}
                 />
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, minHeight: '40px', 
                     display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis'
@@ -163,11 +162,6 @@ const TripsList = ({ token, onCreateTripRequest, onViewDetailsRequest }) => {
                         <VisibilityIcon />
                     </IconButton>
                 </Tooltip>
-                {/* <Tooltip title="Редагувати подорож">
-                    <IconButton size="medium" color="default" onClick={() => alert(`Редагування ${trip.id} (не реалізовано)`)}>
-                        <EditIcon />
-                    </IconButton>
-                </Tooltip> */}
                 <Tooltip title="Видалити подорож">
                     <IconButton size="medium" sx={{color: 'error.light', '&:hover': {color: 'error.main'}}} onClick={() => handleDeleteTrip(trip.id)}>
                         <DeleteIcon />

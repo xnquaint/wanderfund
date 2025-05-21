@@ -7,7 +7,6 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  Grid,
   FormControl,
   InputLabel,
   Select,
@@ -99,7 +98,6 @@ const CreateTripForm = ({ token, onTripCreated, onCancel }) => {
       });
       setLoading(false);
       setFormSuccess('Подорож успішно створено!');
-      console.log('Trip created:', response.data.trip);
       setTitle('');
       setDescription('');
       setStartDate('');
@@ -125,119 +123,111 @@ const CreateTripForm = ({ token, onTripCreated, onCancel }) => {
       <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 3, textAlign: 'center', fontWeight: 'medium' }}>
         Створення нової подорожі
       </Typography>
-      <Box component="form" onSubmit={handleSubmit} noValidate>
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <TextField
-              label="Назва подорожі"
-              variant="outlined"
-              fullWidth
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={loading}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              label="Опис (опціонально)"
-              variant="outlined"
-              fullWidth
-              multiline
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={loading}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              label="Дата початку"
-              type="date"
-              variant="outlined"
-              fullWidth
-              required
-              InputLabelProps={{ shrink: true }}
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              disabled={loading}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              label="Дата завершення"
-              type="date"
-              variant="outlined"
-              fullWidth
-              required
-              InputLabelProps={{ shrink: true }}
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              disabled={loading}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              label="Бюджет"
-              type="number"
-              variant="outlined"
-              fullWidth
-              required
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-              disabled={loading}
-              inputProps={{ min: "0", step: "0.01" }}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <FormControl fullWidth required disabled={loading} variant="outlined">
-              <InputLabel id="currency-select-label">Валюта</InputLabel>
-              <Select
-                labelId="currency-select-label"
-                id="currencyId"
-                value={currencyId}
-                label="Валюта"
-                onChange={(e) => setCurrencyId(e.target.value)}
-              >
-                <MenuItem value="" disabled>
-                  <em>Оберіть валюту</em>
-                </MenuItem>
-                {currencies.map((currency) => (
-                  <MenuItem key={currency.id} value={currency.id}>
-                    {currency.code} ({currency.name})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-           <Grid item xs={12}>
-            <FormControl fullWidth variant="outlined" disabled={loading}>
-              <InputLabel id="status-select-label">Статус</InputLabel>
-              <Select
-                labelId="status-select-label"
-                value={status}
-                label="Статус"
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <MenuItem value="planned">Запланована</MenuItem>
-                <MenuItem value="active">Активна</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
+      <Box component="form" onSubmit={handleSubmit} noValidate 
+        sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+      >
+        <TextField
+          label="Назва подорожі"
+          variant="outlined"
+          fullWidth
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          disabled={loading}
+        />
+        
+        <TextField
+          label="Опис (опціонально)"
+          variant="outlined"
+          fullWidth
+          multiline
+          rows={3}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          disabled={loading}
+        />
+        
+        <TextField
+          label="Дата початку"
+          type="date"
+          variant="outlined"
+          fullWidth
+          required
+          InputLabelProps={{ shrink: true }}
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          disabled={loading}
+        />
+        
+        <TextField
+          label="Дата завершення"
+          type="date"
+          variant="outlined"
+          fullWidth
+          required
+          InputLabelProps={{ shrink: true }}
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          disabled={loading}
+        />
+        
+        <TextField
+          label="Бюджет"
+          type="number"
+          variant="outlined"
+          fullWidth
+          required
+          value={budget}
+          onChange={(e) => setBudget(e.target.value)}
+          disabled={loading}
+          inputProps={{ min: "0", step: "0.01" }}
+        />
+        
+        <FormControl fullWidth required disabled={loading} variant="outlined">
+          <InputLabel id="currency-select-label-create-trip">Валюта</InputLabel>
+          <Select
+            labelId="currency-select-label-create-trip"
+            id="currencyId-create-trip"
+            value={currencyId}
+            label="Валюта"
+            onChange={(e) => setCurrencyId(e.target.value)}
+          >
+            <MenuItem value="" disabled>
+              <em>Оберіть валюту</em>
+            </MenuItem>
+            {currencies.map((currency) => (
+              <MenuItem key={currency.id} value={currency.id}>
+                {currency.code} ({currency.name})
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        
+        <FormControl fullWidth variant="outlined" disabled={loading}>
+          <InputLabel id="status-select-label-create-trip">Статус</InputLabel>
+          <Select
+            labelId="status-select-label-create-trip"
+            id="status-create-trip"
+            value={status}
+            label="Статус"
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <MenuItem value="planned">Запланована</MenuItem>
+            <MenuItem value="active">Активна</MenuItem>
+          </Select>
+        </FormControl>
 
         {formError && (
-          <Alert severity="error" sx={{ mt: 3, width: '100%' }}>
+          <Alert severity="error" sx={{ mt: 1, width: '100%' }}>
             {formError}
           </Alert>
         )}
         {formSuccess && (
-          <Alert severity="success" sx={{ mt: 3, width: '100%' }}>
-            {formSuccess}
+          <Alert severity="success" sx={{ mt: 1, width: '100%' }}>
           </Alert>
         )}
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
           <Button
             onClick={onCancel}
             color="inherit"
